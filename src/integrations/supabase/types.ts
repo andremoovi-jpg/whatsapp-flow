@@ -60,49 +60,79 @@ export type Database = {
       }
       campaigns: {
         Row: {
+          audience_count: number | null
           audience_filter: Json | null
+          audience_type: string | null
+          batch_size: number | null
           completed_at: string | null
           created_at: string | null
+          created_by: string | null
+          description: string | null
           id: string
           name: string
           organization_id: string
+          paused_at: string | null
           phone_number_id: string | null
           scheduled_at: string | null
+          send_rate: number | null
           started_at: string | null
           stats: Json | null
           status: string | null
           template_id: string | null
+          template_variables: Json | null
+          timezone: string | null
           updated_at: string | null
+          whatsapp_account_id: string | null
         }
         Insert: {
+          audience_count?: number | null
           audience_filter?: Json | null
+          audience_type?: string | null
+          batch_size?: number | null
           completed_at?: string | null
           created_at?: string | null
+          created_by?: string | null
+          description?: string | null
           id?: string
           name: string
           organization_id: string
+          paused_at?: string | null
           phone_number_id?: string | null
           scheduled_at?: string | null
+          send_rate?: number | null
           started_at?: string | null
           stats?: Json | null
           status?: string | null
           template_id?: string | null
+          template_variables?: Json | null
+          timezone?: string | null
           updated_at?: string | null
+          whatsapp_account_id?: string | null
         }
         Update: {
+          audience_count?: number | null
           audience_filter?: Json | null
+          audience_type?: string | null
+          batch_size?: number | null
           completed_at?: string | null
           created_at?: string | null
+          created_by?: string | null
+          description?: string | null
           id?: string
           name?: string
           organization_id?: string
+          paused_at?: string | null
           phone_number_id?: string | null
           scheduled_at?: string | null
+          send_rate?: number | null
           started_at?: string | null
           stats?: Json | null
           status?: string | null
           template_id?: string | null
+          template_variables?: Json | null
+          timezone?: string | null
           updated_at?: string | null
+          whatsapp_account_id?: string | null
         }
         Relationships: [
           {
@@ -126,50 +156,90 @@ export type Database = {
             referencedRelation: "message_templates"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "campaigns_whatsapp_account_id_fkey"
+            columns: ["whatsapp_account_id"]
+            isOneToOne: false
+            referencedRelation: "whatsapp_accounts"
+            referencedColumns: ["id"]
+          },
         ]
       }
       contacts: {
         Row: {
           conversation_state: string | null
           created_at: string | null
+          current_flow_id: string | null
+          current_node_id: string | null
           custom_fields: Json | null
           email: string | null
+          first_interaction_at: string | null
+          flow_context: Json | null
           id: string
           last_interaction_at: string | null
           name: string | null
           opted_in: boolean | null
+          opted_in_at: string | null
+          opted_out_at: string | null
           organization_id: string
           phone_number: string
+          profile_picture_url: string | null
           tags: string[] | null
+          total_messages_received: number | null
+          total_messages_sent: number | null
           updated_at: string | null
+          wa_id: string | null
+          whatsapp_account_id: string | null
         }
         Insert: {
           conversation_state?: string | null
           created_at?: string | null
+          current_flow_id?: string | null
+          current_node_id?: string | null
           custom_fields?: Json | null
           email?: string | null
+          first_interaction_at?: string | null
+          flow_context?: Json | null
           id?: string
           last_interaction_at?: string | null
           name?: string | null
           opted_in?: boolean | null
+          opted_in_at?: string | null
+          opted_out_at?: string | null
           organization_id: string
           phone_number: string
+          profile_picture_url?: string | null
           tags?: string[] | null
+          total_messages_received?: number | null
+          total_messages_sent?: number | null
           updated_at?: string | null
+          wa_id?: string | null
+          whatsapp_account_id?: string | null
         }
         Update: {
           conversation_state?: string | null
           created_at?: string | null
+          current_flow_id?: string | null
+          current_node_id?: string | null
           custom_fields?: Json | null
           email?: string | null
+          first_interaction_at?: string | null
+          flow_context?: Json | null
           id?: string
           last_interaction_at?: string | null
           name?: string | null
           opted_in?: boolean | null
+          opted_in_at?: string | null
+          opted_out_at?: string | null
           organization_id?: string
           phone_number?: string
+          profile_picture_url?: string | null
           tags?: string[] | null
+          total_messages_received?: number | null
+          total_messages_sent?: number | null
           updated_at?: string | null
+          wa_id?: string | null
+          whatsapp_account_id?: string | null
         }
         Relationships: [
           {
@@ -179,44 +249,69 @@ export type Database = {
             referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "contacts_whatsapp_account_id_fkey"
+            columns: ["whatsapp_account_id"]
+            isOneToOne: false
+            referencedRelation: "whatsapp_accounts"
+            referencedColumns: ["id"]
+          },
         ]
       }
       conversations: {
         Row: {
+          active_flow_id: string | null
           assigned_to: string | null
           contact_id: string
           created_at: string | null
+          flow_paused: boolean | null
           id: string
           last_message_at: string | null
+          last_message_direction: string | null
           organization_id: string
           phone_number_id: string | null
           status: string | null
+          unread_count: number | null
           updated_at: string | null
+          whatsapp_account_id: string | null
           window_expires_at: string | null
+          window_type: string | null
         }
         Insert: {
+          active_flow_id?: string | null
           assigned_to?: string | null
           contact_id: string
           created_at?: string | null
+          flow_paused?: boolean | null
           id?: string
           last_message_at?: string | null
+          last_message_direction?: string | null
           organization_id: string
           phone_number_id?: string | null
           status?: string | null
+          unread_count?: number | null
           updated_at?: string | null
+          whatsapp_account_id?: string | null
           window_expires_at?: string | null
+          window_type?: string | null
         }
         Update: {
+          active_flow_id?: string | null
           assigned_to?: string | null
           contact_id?: string
           created_at?: string | null
+          flow_paused?: boolean | null
           id?: string
           last_message_at?: string | null
+          last_message_direction?: string | null
           organization_id?: string
           phone_number_id?: string | null
           status?: string | null
+          unread_count?: number | null
           updated_at?: string | null
+          whatsapp_account_id?: string | null
           window_expires_at?: string | null
+          window_type?: string | null
         }
         Relationships: [
           {
@@ -238,6 +333,13 @@ export type Database = {
             columns: ["phone_number_id"]
             isOneToOne: false
             referencedRelation: "phone_numbers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "conversations_whatsapp_account_id_fkey"
+            columns: ["whatsapp_account_id"]
+            isOneToOne: false
+            referencedRelation: "whatsapp_accounts"
             referencedColumns: ["id"]
           },
         ]
@@ -434,39 +536,75 @@ export type Database = {
       flows: {
         Row: {
           created_at: string | null
+          created_by: string | null
           description: string | null
+          failed_executions: number | null
+          folder: string | null
           id: string
           is_active: boolean | null
+          last_execution_at: string | null
+          n8n_webhook_url: string | null
+          n8n_workflow_id: string | null
           name: string
           organization_id: string
+          published_at: string | null
+          published_by: string | null
           status: string | null
+          successful_executions: number | null
+          total_executions: number | null
           trigger_config: Json
           trigger_type: string
           updated_at: string | null
+          version: number | null
+          whatsapp_account_id: string | null
         }
         Insert: {
           created_at?: string | null
+          created_by?: string | null
           description?: string | null
+          failed_executions?: number | null
+          folder?: string | null
           id?: string
           is_active?: boolean | null
+          last_execution_at?: string | null
+          n8n_webhook_url?: string | null
+          n8n_workflow_id?: string | null
           name: string
           organization_id: string
+          published_at?: string | null
+          published_by?: string | null
           status?: string | null
+          successful_executions?: number | null
+          total_executions?: number | null
           trigger_config: Json
           trigger_type: string
           updated_at?: string | null
+          version?: number | null
+          whatsapp_account_id?: string | null
         }
         Update: {
           created_at?: string | null
+          created_by?: string | null
           description?: string | null
+          failed_executions?: number | null
+          folder?: string | null
           id?: string
           is_active?: boolean | null
+          last_execution_at?: string | null
+          n8n_webhook_url?: string | null
+          n8n_workflow_id?: string | null
           name?: string
           organization_id?: string
+          published_at?: string | null
+          published_by?: string | null
           status?: string | null
+          successful_executions?: number | null
+          total_executions?: number | null
           trigger_config?: Json
           trigger_type?: string
           updated_at?: string | null
+          version?: number | null
+          whatsapp_account_id?: string | null
         }
         Relationships: [
           {
@@ -474,6 +612,13 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "flows_whatsapp_account_id_fkey"
+            columns: ["whatsapp_account_id"]
+            isOneToOne: false
+            referencedRelation: "whatsapp_accounts"
             referencedColumns: ["id"]
           },
         ]
@@ -740,6 +885,7 @@ export type Database = {
           processed: boolean | null
           received_at: string | null
           source: string | null
+          whatsapp_account_id: string | null
         }
         Insert: {
           error_message?: string | null
@@ -750,6 +896,7 @@ export type Database = {
           processed?: boolean | null
           received_at?: string | null
           source?: string | null
+          whatsapp_account_id?: string | null
         }
         Update: {
           error_message?: string | null
@@ -760,6 +907,7 @@ export type Database = {
           processed?: boolean | null
           received_at?: string | null
           source?: string | null
+          whatsapp_account_id?: string | null
         }
         Relationships: [
           {
@@ -769,46 +917,107 @@ export type Database = {
             referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "webhook_logs_whatsapp_account_id_fkey"
+            columns: ["whatsapp_account_id"]
+            isOneToOne: false
+            referencedRelation: "whatsapp_accounts"
+            referencedColumns: ["id"]
+          },
         ]
       }
       whatsapp_accounts: {
         Row: {
           access_token_encrypted: string | null
+          app_id: string | null
+          app_secret_encrypted: string | null
           business_manager_id: string | null
+          business_name: string | null
+          business_vertical: string | null
           created_at: string | null
+          health_status: string | null
           id: string
+          last_error_message: string | null
+          last_health_check_at: string | null
+          messages_sent_today: number | null
           meta_data: Json | null
           name: string
           organization_id: string
+          proxy_enabled: boolean | null
+          proxy_password_encrypted: string | null
+          proxy_type: string | null
+          proxy_url: string | null
+          proxy_username: string | null
+          rate_limit_per_day: number | null
+          rate_limit_per_second: number | null
+          rate_limit_reset_at: string | null
           status: string | null
           updated_at: string | null
           waba_id: string
+          webhook_secret: string | null
+          webhook_url: string | null
           webhook_verify_token: string | null
         }
         Insert: {
           access_token_encrypted?: string | null
+          app_id?: string | null
+          app_secret_encrypted?: string | null
           business_manager_id?: string | null
+          business_name?: string | null
+          business_vertical?: string | null
           created_at?: string | null
+          health_status?: string | null
           id?: string
+          last_error_message?: string | null
+          last_health_check_at?: string | null
+          messages_sent_today?: number | null
           meta_data?: Json | null
           name: string
           organization_id: string
+          proxy_enabled?: boolean | null
+          proxy_password_encrypted?: string | null
+          proxy_type?: string | null
+          proxy_url?: string | null
+          proxy_username?: string | null
+          rate_limit_per_day?: number | null
+          rate_limit_per_second?: number | null
+          rate_limit_reset_at?: string | null
           status?: string | null
           updated_at?: string | null
           waba_id: string
+          webhook_secret?: string | null
+          webhook_url?: string | null
           webhook_verify_token?: string | null
         }
         Update: {
           access_token_encrypted?: string | null
+          app_id?: string | null
+          app_secret_encrypted?: string | null
           business_manager_id?: string | null
+          business_name?: string | null
+          business_vertical?: string | null
           created_at?: string | null
+          health_status?: string | null
           id?: string
+          last_error_message?: string | null
+          last_health_check_at?: string | null
+          messages_sent_today?: number | null
           meta_data?: Json | null
           name?: string
           organization_id?: string
+          proxy_enabled?: boolean | null
+          proxy_password_encrypted?: string | null
+          proxy_type?: string | null
+          proxy_url?: string | null
+          proxy_username?: string | null
+          rate_limit_per_day?: number | null
+          rate_limit_per_second?: number | null
+          rate_limit_reset_at?: string | null
           status?: string | null
           updated_at?: string | null
           waba_id?: string
+          webhook_secret?: string | null
+          webhook_url?: string | null
           webhook_verify_token?: string | null
         }
         Relationships: [
