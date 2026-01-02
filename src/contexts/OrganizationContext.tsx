@@ -90,41 +90,47 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
     if (!user) return { error: new Error('Not authenticated'), org: null };
 
     try {
-      // Create organization
-      const { data: org, error: orgError } = await supabase
+      // Generate ID on client to avoid needing to select the inserted row
+      const orgId = crypto.randomUUID();
+
+      // Create organization WITHOUT .select() to avoid RLS SELECT policy check
+      const { error: orgError } = await supabase
         .from('organizations')
-        .insert({ name, slug })
-        .select()
-        .single();
+        .insert({ id: orgId, name, slug });
 
       if (orgError) throw orgError;
 
-      // Add user as admin
+      // Add user as admin - this allows SELECT policy to work afterwards
       const { error: memberError } = await supabase
         .from('organization_members')
         .insert({
-          organization_id: org.id,
+          organization_id: orgId,
           user_id: user.id,
           role: 'admin',
         });
 
       if (memberError) throw memberError;
 
-      const newOrg: Organization = {
-        id: org.id,
-        name: org.name,
-        slug: org.slug,
-        plan: org.plan,
-        settings: org.settings as Record<string, unknown>,
+      // Refetch organizations to get the newly created one
+      await fetchOrganizations();
+
+      const newOrg = organizations.find(o => o.id === orgId) || {
+        id: orgId,
+        name,
+        slug,
+        plan: 'free',
+        settings: {},
         role: 'admin',
       };
 
-      setOrganizations(prev => [...prev, newOrg]);
-      handleSetCurrentOrg(newOrg);
-
       return { error: null, org: newOrg };
     } catch (error) {
-      return { error: error as Error, org: null };
+      const err = error as Error;
+      // Map RLS errors to user-friendly messages
+      if (err.message?.includes('row-level security')) {
+        return { error: new Error('Sua sessão pode ter expirado. Faça login novamente.'), org: null };
+      }
+      return { error: err, org: null };
     }
   };
 

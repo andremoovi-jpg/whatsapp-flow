@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useOrganization } from '@/contexts/OrganizationContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 
 const orgSchema = z.object({
@@ -23,8 +24,31 @@ type OrgFormData = z.infer<typeof orgSchema>;
 export default function Onboarding() {
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
-  const { createOrganization } = useOrganization();
+  const { user, loading: authLoading } = useAuth();
+  const { createOrganization, organizations, loading: orgLoading } = useOrganization();
   const { toast } = useToast();
+
+  // Redirect if not logged in or already has organizations
+  useEffect(() => {
+    if (!authLoading && !user) {
+      navigate('/auth');
+    } else if (!orgLoading && organizations.length > 0) {
+      navigate('/');
+    }
+  }, [authLoading, user, orgLoading, organizations, navigate]);
+
+  // Show loading while checking auth/org state
+  if (authLoading || orgLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!user) {
+    return null;
+  }
 
   const form = useForm<OrgFormData>({
     resolver: zodResolver(orgSchema),
