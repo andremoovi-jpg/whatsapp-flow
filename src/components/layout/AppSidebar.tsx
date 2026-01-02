@@ -6,6 +6,7 @@ import {
   Users,
   GitBranch,
   Send,
+  Activity,
   FileText,
   Settings,
   ChevronLeft,
@@ -33,6 +34,7 @@ const navItems = [
   { path: '/flows', label: 'Fluxos', icon: GitBranch },
   { path: '/campaigns', label: 'Campanhas', icon: Send },
   { path: '/templates', label: 'Templates', icon: FileText },
+  { path: '/monitor', label: 'Monitor', icon: Activity },
   { path: '/settings', label: 'Configurações', icon: Settings },
 ];
 

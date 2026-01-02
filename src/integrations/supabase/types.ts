@@ -862,6 +862,56 @@ export type Database = {
         }
         Relationships: []
       }
+      phone_number_metrics: {
+        Row: {
+          avg_delivery_time_ms: number | null
+          id: string
+          max_throughput_achieved: number | null
+          messages_delivered: number | null
+          messages_failed: number | null
+          messages_read: number | null
+          messages_sent: number | null
+          period_start: string
+          period_type: string
+          phone_number_id: string | null
+          rate_limit_hits: number | null
+        }
+        Insert: {
+          avg_delivery_time_ms?: number | null
+          id?: string
+          max_throughput_achieved?: number | null
+          messages_delivered?: number | null
+          messages_failed?: number | null
+          messages_read?: number | null
+          messages_sent?: number | null
+          period_start: string
+          period_type: string
+          phone_number_id?: string | null
+          rate_limit_hits?: number | null
+        }
+        Update: {
+          avg_delivery_time_ms?: number | null
+          id?: string
+          max_throughput_achieved?: number | null
+          messages_delivered?: number | null
+          messages_failed?: number | null
+          messages_read?: number | null
+          messages_sent?: number | null
+          period_start?: string
+          period_type?: string
+          phone_number_id?: string | null
+          rate_limit_hits?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "phone_number_metrics_phone_number_id_fkey"
+            columns: ["phone_number_id"]
+            isOneToOne: false
+            referencedRelation: "phone_numbers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       phone_numbers: {
         Row: {
           created_at: string | null
@@ -935,6 +985,53 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: []
+      }
+      queue_metrics: {
+        Row: {
+          active: number | null
+          avg_processing_time_ms: number | null
+          completed: number | null
+          delayed: number | null
+          failed: number | null
+          id: string
+          recorded_at: string | null
+          throughput_per_second: number | null
+          waiting: number | null
+          whatsapp_account_id: string | null
+        }
+        Insert: {
+          active?: number | null
+          avg_processing_time_ms?: number | null
+          completed?: number | null
+          delayed?: number | null
+          failed?: number | null
+          id?: string
+          recorded_at?: string | null
+          throughput_per_second?: number | null
+          waiting?: number | null
+          whatsapp_account_id?: string | null
+        }
+        Update: {
+          active?: number | null
+          avg_processing_time_ms?: number | null
+          completed?: number | null
+          delayed?: number | null
+          failed?: number | null
+          id?: string
+          recorded_at?: string | null
+          throughput_per_second?: number | null
+          waiting?: number | null
+          whatsapp_account_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "queue_metrics_whatsapp_account_id_fkey"
+            columns: ["whatsapp_account_id"]
+            isOneToOne: false
+            referencedRelation: "whatsapp_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       webhook_logs: {
         Row: {
@@ -1106,6 +1203,11 @@ export type Database = {
         Args: { hours_threshold?: number; org_id: string }
         Returns: Json
       }
+      get_phone_performance: {
+        Args: { period_type_param?: string; phone_id: string }
+        Returns: Json
+      }
+      get_queue_status: { Args: { waba_id: string }; Returns: Json }
       get_recent_activity: {
         Args: { limit_count?: number; org_id: string }
         Returns: Json
