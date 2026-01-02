@@ -26,6 +26,7 @@ const Templates = lazy(() => import("./pages/Templates"));
 const Settings = lazy(() => import("./pages/Settings"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 const Dashboard = lazy(() => import("./pages/Dashboard"));
+const Monitor = lazy(() => import("./pages/Monitor"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -79,6 +80,7 @@ const App = () => (
                     <Route path="/campaigns/:id" element={<CampaignDetail />} />
                     <Route path="/templates" element={<Templates />} />
                     <Route path="/settings" element={<Settings />} />
+                    <Route path="/monitor" element={<Monitor />} />
                     <Route path="*" element={<NotFound />} />
                   </Routes>
                 </Suspense>
