@@ -1035,6 +1035,24 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_dashboard_metrics: { Args: { org_id: string }; Returns: Json }
+      get_message_status_distribution: {
+        Args: { org_id: string }
+        Returns: Json
+      }
+      get_messages_per_day: { Args: { org_id: string }; Returns: Json }
+      get_pending_conversations: {
+        Args: { hours_threshold?: number; org_id: string }
+        Returns: Json
+      }
+      get_recent_activity: {
+        Args: { limit_count?: number; org_id: string }
+        Returns: Json
+      }
+      get_top_flows: {
+        Args: { limit_count?: number; org_id: string }
+        Returns: Json
+      }
       get_user_org_ids: { Args: { _user_id: string }; Returns: string[] }
       is_org_admin: {
         Args: { _org_id: string; _user_id: string }
