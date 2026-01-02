@@ -389,7 +389,7 @@ export function useDuplicateFlow() {
       // Create node ID mapping
       const nodeIdMap: Record<string, string> = {};
       const newNodes = originalNodes.map((node) => {
-        const newId = `node_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        const newId = crypto.randomUUID();
         nodeIdMap[node.id] = newId;
         return {
           id: newId,
@@ -419,7 +419,7 @@ export function useDuplicateFlow() {
 
       // Create new edges with mapped node IDs
       const newEdges = originalEdges.map((edge) => ({
-        id: `edge_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        id: crypto.randomUUID(),
         flow_id: newFlow.id,
         source_node_id: nodeIdMap[edge.source_node_id],
         target_node_id: nodeIdMap[edge.target_node_id],
