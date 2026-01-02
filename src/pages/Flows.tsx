@@ -13,7 +13,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { CreateFlowModal } from '@/components/flows/CreateFlowModal';
-import { useFlows, useToggleFlowActive, useDeleteFlow } from '@/hooks/useFlows';
+import { useFlows, useToggleFlowActive, useDeleteFlow, useDuplicateFlow } from '@/hooks/useFlows';
 import { Skeleton } from '@/components/ui/skeleton';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -29,6 +29,7 @@ export default function Flows() {
   const { data: flows, isLoading } = useFlows(filter, search);
   const toggleActive = useToggleFlowActive();
   const deleteFlow = useDeleteFlow();
+  const duplicateFlow = useDuplicateFlow();
 
   const handleToggle = (flowId: string, currentState: boolean) => {
     toggleActive.mutate({ flowId, isActive: !currentState });
@@ -38,6 +39,10 @@ export default function Flows() {
     if (confirm('Tem certeza que deseja excluir este fluxo?')) {
       deleteFlow.mutate(flowId);
     }
+  };
+
+  const handleDuplicate = (flowId: string) => {
+    duplicateFlow.mutate(flowId);
   };
 
   const getStatusBadge = (status: string, isActive: boolean) => {
@@ -123,7 +128,7 @@ export default function Flows() {
                           <DropdownMenuItem onClick={() => navigate(`/flows/${flow.id}/edit`)}>
                             <Edit className="h-4 w-4 mr-2" /> Editar
                           </DropdownMenuItem>
-                          <DropdownMenuItem><Copy className="h-4 w-4 mr-2" /> Duplicar</DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleDuplicate(flow.id)}><Copy className="h-4 w-4 mr-2" /> Duplicar</DropdownMenuItem>
                           <DropdownMenuItem className="text-destructive" onClick={() => handleDelete(flow.id)}>
                             <Trash2 className="h-4 w-4 mr-2" /> Excluir
                           </DropdownMenuItem>

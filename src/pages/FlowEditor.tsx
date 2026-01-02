@@ -1,12 +1,12 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Node, Edge } from 'reactflow';
-import { ArrowLeft, Save, Play, Rocket, Settings } from 'lucide-react';
+import { ArrowLeft, Save, Play, Rocket, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
-import { FlowCanvas } from '@/components/flows/FlowCanvas';
+import { FlowCanvas, FlowCanvasRef } from '@/components/flows/FlowCanvas';
 import {
   useFlow,
   useFlowNodes,
@@ -17,10 +17,21 @@ import {
   NodeConfig,
 } from '@/hooks/useFlows';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useToast } from '@/hooks/use-toast';
+import { validateFlow, exportFlowToJSON } from '@/lib/flowUtils';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 
 export default function FlowEditor() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { toast } = useToast();
+  const canvasRef = useRef<FlowCanvasRef>(null);
 
   const { data: flow, isLoading: flowLoading } = useFlow(id);
   const { data: dbNodes, isLoading: nodesLoading } = useFlowNodes(id);
@@ -32,8 +43,8 @@ export default function FlowEditor() {
 
   const [flowName, setFlowName] = useState('');
   const [isEditing, setIsEditing] = useState(false);
-  const [currentNodes, setCurrentNodes] = useState<Node[]>([]);
-  const [currentEdges, setCurrentEdges] = useState<Edge[]>([]);
+  const [validationErrors, setValidationErrors] = useState<string[]>([]);
+  const [showValidationModal, setShowValidationModal] = useState(false);
 
   useEffect(() => {
     if (flow) {
@@ -42,13 +53,9 @@ export default function FlowEditor() {
   }, [flow]);
 
   const handleSave = useCallback(async () => {
-    if (!id) return;
+    if (!id || !canvasRef.current) return;
 
-    // Get current flow data from window (set by FlowCanvas)
-    const flowData = (window as unknown as { getFlowData?: () => { nodes: Node[]; edges: Edge[] } }).getFlowData?.();
-    if (!flowData) return;
-
-    const { nodes, edges } = flowData;
+    const { nodes, edges } = canvasRef.current.getFlowData();
 
     await saveCanvas.mutateAsync({
       flowId: id,
@@ -70,6 +77,31 @@ export default function FlowEditor() {
     });
   }, [id, saveCanvas]);
 
+  const handleValidateAndPublish = useCallback(async () => {
+    if (!id || !canvasRef.current || !flow) return;
+
+    const { nodes, edges } = canvasRef.current.getFlowData();
+    const validation = validateFlow(nodes, edges);
+
+    if (!validation.isValid) {
+      setValidationErrors(validation.errors);
+      setShowValidationModal(true);
+      return;
+    }
+
+    // Save first
+    await handleSave();
+
+    // Export to JSON for debugging/future n8n integration
+    const executableFlow = exportFlowToJSON(id, flow.name, nodes, edges);
+    console.log('Executable flow:', executableFlow);
+
+    // Activate the flow
+    await toggleActive.mutateAsync({ flowId: id, isActive: true });
+    
+    toast({ title: 'Fluxo publicado com sucesso!' });
+  }, [id, flow, handleSave, toggleActive, toast]);
+
   const handleNameChange = async () => {
     if (!id || !flowName.trim()) return;
     await updateFlow.mutateAsync({ id, name: flowName.trim() });
@@ -77,7 +109,20 @@ export default function FlowEditor() {
   };
 
   const handleToggleActive = async () => {
-    if (!id || !flow) return;
+    if (!id || !flow || !canvasRef.current) return;
+    
+    // Validate before activating
+    if (!flow.is_active) {
+      const { nodes, edges } = canvasRef.current.getFlowData();
+      const validation = validateFlow(nodes, edges);
+
+      if (!validation.isValid) {
+        setValidationErrors(validation.errors);
+        setShowValidationModal(true);
+        return;
+      }
+    }
+
     await toggleActive.mutateAsync({ flowId: id, isActive: !flow.is_active });
   };
 
@@ -151,15 +196,20 @@ export default function FlowEditor() {
           </Button>
           <Button 
             size="sm" 
+            variant="outline"
             onClick={handleSave}
             disabled={saveCanvas.isPending}
           >
             <Save className="h-4 w-4 mr-2" />
             {saveCanvas.isPending ? 'Salvando...' : 'Salvar'}
           </Button>
-          <Button size="sm" variant="default">
+          <Button 
+            size="sm" 
+            onClick={handleValidateAndPublish}
+            disabled={toggleActive.isPending}
+          >
             <Rocket className="h-4 w-4 mr-2" />
-            Publicar
+            {toggleActive.isPending ? 'Publicando...' : 'Publicar'}
           </Button>
         </div>
       </header>
@@ -169,10 +219,32 @@ export default function FlowEditor() {
         <FlowCanvas
           initialNodes={dbNodes || []}
           initialEdges={dbEdges || []}
-          onNodesChange={setCurrentNodes}
-          onEdgesChange={setCurrentEdges}
+          canvasRef={canvasRef}
         />
       </div>
+
+      {/* Validation Errors Modal */}
+      <Dialog open={showValidationModal} onOpenChange={setShowValidationModal}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <AlertTriangle className="h-5 w-5" />
+              Erros de Validação
+            </DialogTitle>
+            <DialogDescription>
+              Corrija os seguintes erros antes de publicar o fluxo:
+            </DialogDescription>
+          </DialogHeader>
+          <ul className="space-y-2 mt-4">
+            {validationErrors.map((error, index) => (
+              <li key={index} className="flex items-start gap-2 text-sm">
+                <span className="text-destructive">•</span>
+                <span>{error}</span>
+              </li>
+            ))}
+          </ul>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
