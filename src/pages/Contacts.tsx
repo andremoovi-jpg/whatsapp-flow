@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, MoreHorizontal, Phone, Mail, Eye, Pencil, Trash2 } from 'lucide-react';
+import { Plus, MoreHorizontal, Phone, Mail, Eye, Pencil, Trash2, Users } from 'lucide-react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
@@ -28,6 +28,8 @@ import { ImportCSVModal } from '@/components/contacts/ImportCSVModal';
 import { ContactFilters } from '@/components/contacts/ContactFilters';
 import { BulkActionsBar } from '@/components/contacts/BulkActionsBar';
 import { TagBadge } from '@/components/contacts/TagBadge';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { EmptyContacts } from '@/components/ui/empty-state';
 import {
   useContacts,
   useContactStats,
@@ -45,6 +47,7 @@ export default function Contacts() {
   const [showContactModal, setShowContactModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
   const [editingContact, setEditingContact] = useState<Contact | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
 
   const { data: contactsData, isLoading } = useContacts(filters, page);
   const { data: stats } = useContactStats();
@@ -54,6 +57,7 @@ export default function Contacts() {
   const contacts = contactsData?.data ?? [];
   const totalCount = contactsData?.count ?? 0;
   const totalPages = Math.ceil(totalCount / 20);
+  const hasContacts = contacts.length > 0 || Object.keys(filters).length > 0;
 
   const toggleContact = (id: string) => {
     setSelectedContacts((prev) =>
@@ -72,8 +76,11 @@ export default function Contacts() {
     setShowContactModal(true);
   };
 
-  const handleDelete = (id: string) => {
-    deleteContacts.mutate([id]);
+  const confirmDelete = () => {
+    if (deleteConfirm) {
+      deleteContacts.mutate([deleteConfirm]);
+      setDeleteConfirm(null);
+    }
   };
 
   const formatPhone = (phone: string) => {
@@ -164,10 +171,16 @@ export default function Contacts() {
                       <TableCell><Skeleton className="h-8 w-8" /></TableCell>
                     </TableRow>
                   ))
+                ) : !hasContacts ? (
+                  <TableRow>
+                    <TableCell colSpan={7}>
+                      <EmptyContacts onAdd={() => { setEditingContact(null); setShowContactModal(true); }} />
+                    </TableCell>
+                  </TableRow>
                 ) : contacts.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
-                      Nenhum contato encontrado
+                      Nenhum contato encontrado com esses filtros
                     </TableCell>
                   </TableRow>
                 ) : (
@@ -217,24 +230,24 @@ export default function Contacts() {
                               <MoreHorizontal className="h-4 w-4" />
                             </Button>
                           </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => navigate(`/contacts/${contact.id}`)}>
-                              <Eye className="h-4 w-4 mr-2" />Ver detalhes
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleEdit(contact)}>
-                              <Pencil className="h-4 w-4 mr-2" />Editar
-                            </DropdownMenuItem>
-                            <DropdownMenuItem className="text-destructive" onClick={() => handleDelete(contact.id)}>
-                              <Trash2 className="h-4 w-4 mr-2" />Excluir
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
+                        <DropdownMenuContent align="end" className="bg-popover">
+                          <DropdownMenuItem onClick={() => navigate(`/contacts/${contact.id}`)}>
+                            <Eye className="h-4 w-4 mr-2" />Ver detalhes
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleEdit(contact)}>
+                            <Pencil className="h-4 w-4 mr-2" />Editar
+                          </DropdownMenuItem>
+                          <DropdownMenuItem className="text-destructive" onClick={() => setDeleteConfirm(contact.id)}>
+                            <Trash2 className="h-4 w-4 mr-2" />Excluir
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
 
             {/* Pagination */}
             {totalPages > 1 && (
@@ -255,6 +268,18 @@ export default function Contacts() {
       {/* Modals */}
       <ContactModal open={showContactModal} onOpenChange={setShowContactModal} contact={editingContact} />
       <ImportCSVModal open={showImportModal} onOpenChange={setShowImportModal} />
+
+      {/* Delete Confirmation */}
+      <ConfirmDialog
+        open={!!deleteConfirm}
+        onOpenChange={(open) => !open && setDeleteConfirm(null)}
+        title="Excluir contato"
+        description="Tem certeza que deseja excluir este contato? Esta ação não pode ser desfeita."
+        confirmLabel="Excluir"
+        variant="destructive"
+        onConfirm={confirmDelete}
+        loading={deleteContacts.isPending}
+      />
     </DashboardLayout>
   );
 }

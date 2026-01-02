@@ -13,6 +13,8 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { CreateFlowModal } from '@/components/flows/CreateFlowModal';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { EmptyFlows } from '@/components/ui/empty-state';
 import { useFlows, useToggleFlowActive, useDeleteFlow, useDuplicateFlow } from '@/hooks/useFlows';
 import { Skeleton } from '@/components/ui/skeleton';
 import { formatDistanceToNow } from 'date-fns';
@@ -25,6 +27,8 @@ export default function Flows() {
   const [filter, setFilter] = useState<FlowFilter>('all');
   const [search, setSearch] = useState('');
   const [createOpen, setCreateOpen] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+  const [deactivateConfirm, setDeactivateConfirm] = useState<string | null>(null);
 
   const { data: flows, isLoading } = useFlows(filter, search);
   const toggleActive = useToggleFlowActive();
@@ -32,12 +36,24 @@ export default function Flows() {
   const duplicateFlow = useDuplicateFlow();
 
   const handleToggle = (flowId: string, currentState: boolean) => {
-    toggleActive.mutate({ flowId, isActive: !currentState });
+    if (currentState) {
+      setDeactivateConfirm(flowId);
+    } else {
+      toggleActive.mutate({ flowId, isActive: true });
+    }
   };
 
-  const handleDelete = (flowId: string) => {
-    if (confirm('Tem certeza que deseja excluir este fluxo?')) {
-      deleteFlow.mutate(flowId);
+  const confirmDeactivate = () => {
+    if (deactivateConfirm) {
+      toggleActive.mutate({ flowId: deactivateConfirm, isActive: false });
+      setDeactivateConfirm(null);
+    }
+  };
+
+  const confirmDelete = () => {
+    if (deleteConfirm) {
+      deleteFlow.mutate(deleteConfirm);
+      setDeleteConfirm(null);
     }
   };
 
@@ -56,6 +72,8 @@ export default function Flows() {
     if (status === 'paused') return 'Pausado';
     return 'Rascunho';
   };
+
+  const hasFlows = flows && flows.length > 0;
 
   return (
     <DashboardLayout breadcrumbs={[{ label: 'Fluxos' }]}>
@@ -104,6 +122,10 @@ export default function Flows() {
                 </CardContent>
               </Card>
             ))
+          ) : !hasFlows && !search ? (
+            <div className="col-span-full">
+              <EmptyFlows onCreate={() => setCreateOpen(true)} />
+            </div>
           ) : (
             flows?.map((flow) => (
               <Card key={flow.id} className="hover-lift cursor-pointer" onClick={() => navigate(`/flows/${flow.id}/edit`)}>
@@ -117,19 +139,20 @@ export default function Flows() {
                         checked={flow.is_active} 
                         onCheckedChange={() => handleToggle(flow.id, flow.is_active)}
                         disabled={flow.status === 'draft'}
+                        aria-label={flow.is_active ? 'Desativar fluxo' : 'Ativar fluxo'}
                       />
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-8 w-8">
+                          <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="Mais opções">
                             <MoreHorizontal className="h-4 w-4" />
                           </Button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
+                        <DropdownMenuContent align="end" className="bg-popover">
                           <DropdownMenuItem onClick={() => navigate(`/flows/${flow.id}/edit`)}>
                             <Edit className="h-4 w-4 mr-2" /> Editar
                           </DropdownMenuItem>
                           <DropdownMenuItem onClick={() => handleDuplicate(flow.id)}><Copy className="h-4 w-4 mr-2" /> Duplicar</DropdownMenuItem>
-                          <DropdownMenuItem className="text-destructive" onClick={() => handleDelete(flow.id)}>
+                          <DropdownMenuItem className="text-destructive" onClick={() => setDeleteConfirm(flow.id)}>
                             <Trash2 className="h-4 w-4 mr-2" /> Excluir
                           </DropdownMenuItem>
                         </DropdownMenuContent>
@@ -184,6 +207,29 @@ export default function Flows() {
       </div>
 
       <CreateFlowModal open={createOpen} onOpenChange={setCreateOpen} />
+
+      {/* Delete Confirmation */}
+      <ConfirmDialog
+        open={!!deleteConfirm}
+        onOpenChange={(open) => !open && setDeleteConfirm(null)}
+        title="Excluir fluxo"
+        description="Tem certeza que deseja excluir este fluxo? Esta ação não pode ser desfeita."
+        confirmLabel="Excluir"
+        variant="destructive"
+        onConfirm={confirmDelete}
+        loading={deleteFlow.isPending}
+      />
+
+      {/* Deactivate Confirmation */}
+      <ConfirmDialog
+        open={!!deactivateConfirm}
+        onOpenChange={(open) => !open && setDeactivateConfirm(null)}
+        title="Desativar fluxo"
+        description="O fluxo será pausado e não processará novas conversas. Deseja continuar?"
+        confirmLabel="Desativar"
+        onConfirm={confirmDeactivate}
+        loading={toggleActive.isPending}
+      />
     </DashboardLayout>
   );
 }
