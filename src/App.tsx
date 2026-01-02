@@ -15,6 +15,8 @@ import ContactDetail from "./pages/ContactDetail";
 import Flows from "./pages/Flows";
 import FlowEditor from "./pages/FlowEditor";
 import Campaigns from "./pages/Campaigns";
+import CampaignNew from "./pages/CampaignNew";
+import CampaignDetail from "./pages/CampaignDetail";
 import Templates from "./pages/Templates";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
@@ -39,6 +41,8 @@ const App = () => (
               <Route path="/flows" element={<Flows />} />
               <Route path="/flows/:id/edit" element={<FlowEditor />} />
               <Route path="/campaigns" element={<Campaigns />} />
+              <Route path="/campaigns/new" element={<CampaignNew />} />
+              <Route path="/campaigns/:id" element={<CampaignDetail />} />
               <Route path="/templates" element={<Templates />} />
               <Route path="/settings" element={<Settings />} />
               <Route path="*" element={<NotFound />} />
