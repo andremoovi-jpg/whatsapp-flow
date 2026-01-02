@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useRef, useState, useImperativeHandle } from 'react';
 import ReactFlow, {
   Controls,
   MiniMap,
@@ -24,14 +24,19 @@ const nodeTypes = {
   flowNode: FlowNodeComponent,
 };
 
+export interface FlowCanvasRef {
+  getFlowData: () => { nodes: Node[]; edges: Edge[] };
+}
+
 interface FlowCanvasProps {
   initialNodes: FlowNode[];
   initialEdges: FlowEdge[];
-  onNodesChange: (nodes: Node[]) => void;
-  onEdgesChange: (edges: Edge[]) => void;
+  canvasRef?: React.RefObject<FlowCanvasRef>;
 }
 
-function FlowCanvasInner({ initialNodes, initialEdges, onNodesChange, onEdgesChange }: FlowCanvasProps) {
+interface FlowCanvasInnerProps extends FlowCanvasProps {}
+
+function FlowCanvasInner({ initialNodes, initialEdges, canvasRef }: FlowCanvasInnerProps) {
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   const [reactFlowInstance, setReactFlowInstance] = useState<ReactFlowInstance | null>(null);
   const [selectedNode, setSelectedNode] = useState<Node | null>(null);
@@ -62,6 +67,15 @@ function FlowCanvasInner({ initialNodes, initialEdges, onNodesChange, onEdgesCha
   const [nodes, setNodes, onNodesChangeInternal] = useNodesState(rfNodes);
   const [edges, setEdges, onEdgesChangeInternal] = useEdgesState(rfEdges);
 
+  // Expose methods via ref for parent to access
+  useImperativeHandle(
+    canvasRef,
+    () => ({
+      getFlowData: () => ({ nodes, edges }),
+    }),
+    [nodes, edges]
+  );
+
   // Sync changes back
   const handleNodesChange = useCallback(
     (changes: Parameters<typeof onNodesChangeInternal>[0]) => {
@@ -76,12 +90,6 @@ function FlowCanvasInner({ initialNodes, initialEdges, onNodesChange, onEdgesCha
     },
     [onEdgesChangeInternal]
   );
-
-  // Notify parent of changes
-  const notifyParent = useCallback(() => {
-    onNodesChange(nodes);
-    onEdgesChange(edges);
-  }, [nodes, edges, onNodesChange, onEdgesChange]);
 
   // Connection handler
   const onConnect = useCallback(
@@ -178,16 +186,6 @@ function FlowCanvasInner({ initialNodes, initialEdges, onNodesChange, onEdgesCha
     },
     [selectedNode, handleDeleteNode]
   );
-
-  // Expose nodes and edges for saving
-  const getFlowData = useCallback(() => {
-    return { nodes, edges };
-  }, [nodes, edges]);
-
-  // Attach to window for parent access
-  if (typeof window !== 'undefined') {
-    (window as unknown as { getFlowData?: () => { nodes: Node[]; edges: Edge[] } }).getFlowData = getFlowData;
-  }
 
   return (
     <div className="flex h-full" onKeyDown={onKeyDown} tabIndex={0}>

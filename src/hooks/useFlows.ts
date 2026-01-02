@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useOrganization } from '@/contexts/OrganizationContext';
 import { useToast } from '@/hooks/use-toast';
 import type { Json } from '@/integrations/supabase/types';
+import type { Node, Edge } from 'reactflow';
 
 export interface FlowNode {
   id: string;
@@ -309,6 +310,11 @@ export function useDeleteFlow() {
 
   return useMutation({
     mutationFn: async (flowId: string) => {
+      // Delete edges first (foreign key constraint)
+      await supabase.from('flow_edges').delete().eq('flow_id', flowId);
+      // Delete nodes
+      await supabase.from('flow_nodes').delete().eq('flow_id', flowId);
+      // Delete flow
       const { error } = await supabase
         .from('flows')
         .delete()
@@ -322,6 +328,109 @@ export function useDeleteFlow() {
     },
     onError: () => {
       toast({ title: 'Erro ao excluir fluxo', variant: 'destructive' });
+    },
+  });
+}
+
+export function useDuplicateFlow() {
+  const queryClient = useQueryClient();
+  const { currentOrg } = useOrganization();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async (flowId: string) => {
+      if (!currentOrg?.id) throw new Error('No organization selected');
+
+      // Fetch original flow
+      const { data: originalFlow, error: flowError } = await supabase
+        .from('flows')
+        .select('*')
+        .eq('id', flowId)
+        .single();
+
+      if (flowError) throw flowError;
+
+      // Create new flow
+      const { data: newFlow, error: newFlowError } = await supabase
+        .from('flows')
+        .insert({
+          organization_id: currentOrg.id,
+          name: `${originalFlow.name} (cópia)`,
+          description: originalFlow.description,
+          trigger_type: originalFlow.trigger_type,
+          trigger_config: originalFlow.trigger_config,
+          status: 'draft',
+          is_active: false,
+        })
+        .select()
+        .single();
+
+      if (newFlowError) throw newFlowError;
+
+      // Fetch original nodes
+      const { data: originalNodes, error: nodesError } = await supabase
+        .from('flow_nodes')
+        .select('*')
+        .eq('flow_id', flowId);
+
+      if (nodesError) throw nodesError;
+
+      // Create node ID mapping
+      const nodeIdMap: Record<string, string> = {};
+      const newNodes = originalNodes.map((node) => {
+        const newId = `node_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        nodeIdMap[node.id] = newId;
+        return {
+          id: newId,
+          flow_id: newFlow.id,
+          type: node.type,
+          name: node.name,
+          config: node.config,
+          position_x: node.position_x,
+          position_y: node.position_y,
+        };
+      });
+
+      if (newNodes.length > 0) {
+        const { error: insertNodesError } = await supabase
+          .from('flow_nodes')
+          .insert(newNodes);
+        if (insertNodesError) throw insertNodesError;
+      }
+
+      // Fetch original edges
+      const { data: originalEdges, error: edgesError } = await supabase
+        .from('flow_edges')
+        .select('*')
+        .eq('flow_id', flowId);
+
+      if (edgesError) throw edgesError;
+
+      // Create new edges with mapped node IDs
+      const newEdges = originalEdges.map((edge) => ({
+        id: `edge_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        flow_id: newFlow.id,
+        source_node_id: nodeIdMap[edge.source_node_id],
+        target_node_id: nodeIdMap[edge.target_node_id],
+        source_handle: edge.source_handle,
+        label: edge.label,
+      }));
+
+      if (newEdges.length > 0) {
+        const { error: insertEdgesError } = await supabase
+          .from('flow_edges')
+          .insert(newEdges);
+        if (insertEdgesError) throw insertEdgesError;
+      }
+
+      return newFlow;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['flows'] });
+      toast({ title: 'Fluxo duplicado com sucesso!' });
+    },
+    onError: () => {
+      toast({ title: 'Erro ao duplicar fluxo', variant: 'destructive' });
     },
   });
 }
