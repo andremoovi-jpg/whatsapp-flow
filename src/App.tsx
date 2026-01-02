@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { OrganizationProvider } from "@/contexts/OrganizationContext";
+import { WABAProvider } from "@/contexts/WABAContext";
 
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
@@ -31,22 +32,24 @@ const App = () => (
       <BrowserRouter>
         <AuthProvider>
           <OrganizationProvider>
-            <Routes>
-              <Route path="/" element={<Index />} />
-              <Route path="/auth" element={<Auth />} />
-              <Route path="/onboarding" element={<Onboarding />} />
-              <Route path="/inbox" element={<Inbox />} />
-              <Route path="/contacts" element={<Contacts />} />
-              <Route path="/contacts/:id" element={<ContactDetail />} />
-              <Route path="/flows" element={<Flows />} />
-              <Route path="/flows/:id/edit" element={<FlowEditor />} />
-              <Route path="/campaigns" element={<Campaigns />} />
-              <Route path="/campaigns/new" element={<CampaignNew />} />
-              <Route path="/campaigns/:id" element={<CampaignDetail />} />
-              <Route path="/templates" element={<Templates />} />
-              <Route path="/settings" element={<Settings />} />
-              <Route path="*" element={<NotFound />} />
-            </Routes>
+            <WABAProvider>
+              <Routes>
+                <Route path="/" element={<Index />} />
+                <Route path="/auth" element={<Auth />} />
+                <Route path="/onboarding" element={<Onboarding />} />
+                <Route path="/inbox" element={<Inbox />} />
+                <Route path="/contacts" element={<Contacts />} />
+                <Route path="/contacts/:id" element={<ContactDetail />} />
+                <Route path="/flows" element={<Flows />} />
+                <Route path="/flows/:id/edit" element={<FlowEditor />} />
+                <Route path="/campaigns" element={<Campaigns />} />
+                <Route path="/campaigns/new" element={<CampaignNew />} />
+                <Route path="/campaigns/:id" element={<CampaignDetail />} />
+                <Route path="/templates" element={<Templates />} />
+                <Route path="/settings" element={<Settings />} />
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </WABAProvider>
           </OrganizationProvider>
         </AuthProvider>
       </BrowserRouter>
