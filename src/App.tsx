@@ -13,6 +13,7 @@ import Inbox from "./pages/Inbox";
 import Contacts from "./pages/Contacts";
 import ContactDetail from "./pages/ContactDetail";
 import Flows from "./pages/Flows";
+import FlowEditor from "./pages/FlowEditor";
 import Campaigns from "./pages/Campaigns";
 import Templates from "./pages/Templates";
 import Settings from "./pages/Settings";
@@ -36,6 +37,7 @@ const App = () => (
               <Route path="/contacts" element={<Contacts />} />
               <Route path="/contacts/:id" element={<ContactDetail />} />
               <Route path="/flows" element={<Flows />} />
+              <Route path="/flows/:id/edit" element={<FlowEditor />} />
               <Route path="/campaigns" element={<Campaigns />} />
               <Route path="/templates" element={<Templates />} />
               <Route path="/settings" element={<Settings />} />
