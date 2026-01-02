@@ -120,7 +120,7 @@ function FlowCanvasInner({ initialNodes, initialEdges, canvasRef }: FlowCanvasIn
       });
 
       const newNode: Node = {
-        id: `node_${Date.now()}`,
+        id: crypto.randomUUID(),
         type: 'flowNode',
         position,
         data: { label, type, config: {} },
