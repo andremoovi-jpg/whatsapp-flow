@@ -1,4 +1,6 @@
-import { Plus, Search, MoreHorizontal, Play, Pause, GitBranch, Zap } from 'lucide-react';
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Plus, Search, MoreHorizontal, GitBranch, Zap, Trash2, Copy, Edit } from 'lucide-react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -10,47 +12,46 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { CreateFlowModal } from '@/components/flows/CreateFlowModal';
+import { useFlows, useToggleFlowActive, useDeleteFlow } from '@/hooks/useFlows';
+import { Skeleton } from '@/components/ui/skeleton';
+import { formatDistanceToNow } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 
-const flows = [
-  {
-    id: '1',
-    name: 'Boas-vindas',
-    description: 'Fluxo de boas-vindas para novos contatos',
-    trigger: 'Primeira mensagem',
-    status: 'active',
-    executions: 1234,
-    lastRun: '2 min atrás',
-  },
-  {
-    id: '2',
-    name: 'Atendimento Suporte',
-    description: 'Direcionamento automático para suporte',
-    trigger: 'Palavra-chave: suporte',
-    status: 'active',
-    executions: 856,
-    lastRun: '15 min atrás',
-  },
-  {
-    id: '3',
-    name: 'Carrinho Abandonado',
-    description: 'Recuperação de carrinhos abandonados',
-    trigger: 'Webhook externo',
-    status: 'paused',
-    executions: 432,
-    lastRun: '2 horas atrás',
-  },
-  {
-    id: '4',
-    name: 'Pós-venda',
-    description: 'Acompanhamento após compra',
-    trigger: 'Webhook externo',
-    status: 'draft',
-    executions: 0,
-    lastRun: 'Nunca',
-  },
-];
+type FlowFilter = 'all' | 'active' | 'paused' | 'draft';
 
 export default function Flows() {
+  const navigate = useNavigate();
+  const [filter, setFilter] = useState<FlowFilter>('all');
+  const [search, setSearch] = useState('');
+  const [createOpen, setCreateOpen] = useState(false);
+
+  const { data: flows, isLoading } = useFlows(filter, search);
+  const toggleActive = useToggleFlowActive();
+  const deleteFlow = useDeleteFlow();
+
+  const handleToggle = (flowId: string, currentState: boolean) => {
+    toggleActive.mutate({ flowId, isActive: !currentState });
+  };
+
+  const handleDelete = (flowId: string) => {
+    if (confirm('Tem certeza que deseja excluir este fluxo?')) {
+      deleteFlow.mutate(flowId);
+    }
+  };
+
+  const getStatusBadge = (status: string, isActive: boolean) => {
+    if (isActive) return 'badge-success';
+    if (status === 'paused') return 'badge-warning';
+    return 'bg-muted text-muted-foreground';
+  };
+
+  const getStatusLabel = (status: string, isActive: boolean) => {
+    if (isActive) return 'Ativo';
+    if (status === 'paused') return 'Pausado';
+    return 'Rascunho';
+  };
+
   return (
     <DashboardLayout breadcrumbs={[{ label: 'Fluxos' }]}>
       <div className="space-y-6 animate-fade-in">
@@ -62,7 +63,7 @@ export default function Flows() {
               Crie e gerencie seus fluxos de automação
             </p>
           </div>
-          <Button>
+          <Button onClick={() => setCreateOpen(true)}>
             <Plus className="h-4 w-4 mr-2" />
             Novo Fluxo
           </Button>
@@ -75,80 +76,95 @@ export default function Flows() {
             <Input
               placeholder="Buscar fluxos..."
               className="pl-9"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
             />
           </div>
-          <Button variant="outline">Todos</Button>
-          <Button variant="ghost">Ativos</Button>
-          <Button variant="ghost">Pausados</Button>
-          <Button variant="ghost">Rascunhos</Button>
+          <Button variant={filter === 'all' ? 'outline' : 'ghost'} onClick={() => setFilter('all')}>Todos</Button>
+          <Button variant={filter === 'active' ? 'outline' : 'ghost'} onClick={() => setFilter('active')}>Ativos</Button>
+          <Button variant={filter === 'paused' ? 'outline' : 'ghost'} onClick={() => setFilter('paused')}>Pausados</Button>
+          <Button variant={filter === 'draft' ? 'outline' : 'ghost'} onClick={() => setFilter('draft')}>Rascunhos</Button>
         </div>
 
         {/* Flows Grid */}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {flows.map((flow) => (
-            <Card key={flow.id} className="hover-lift cursor-pointer">
-              <CardContent className="p-5">
-                <div className="flex items-start justify-between mb-4">
-                  <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                    <GitBranch className="h-5 w-5 text-primary" />
+          {isLoading ? (
+            Array.from({ length: 6 }).map((_, i) => (
+              <Card key={i}>
+                <CardContent className="p-5">
+                  <Skeleton className="h-10 w-10 rounded-lg mb-4" />
+                  <Skeleton className="h-5 w-32 mb-2" />
+                  <Skeleton className="h-4 w-full mb-4" />
+                  <Skeleton className="h-3 w-24" />
+                </CardContent>
+              </Card>
+            ))
+          ) : (
+            flows?.map((flow) => (
+              <Card key={flow.id} className="hover-lift cursor-pointer" onClick={() => navigate(`/flows/${flow.id}/edit`)}>
+                <CardContent className="p-5">
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                      <GitBranch className="h-5 w-5 text-primary" />
+                    </div>
+                    <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                      <Switch 
+                        checked={flow.is_active} 
+                        onCheckedChange={() => handleToggle(flow.id, flow.is_active)}
+                        disabled={flow.status === 'draft'}
+                      />
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-8 w-8">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => navigate(`/flows/${flow.id}/edit`)}>
+                            <Edit className="h-4 w-4 mr-2" /> Editar
+                          </DropdownMenuItem>
+                          <DropdownMenuItem><Copy className="h-4 w-4 mr-2" /> Duplicar</DropdownMenuItem>
+                          <DropdownMenuItem className="text-destructive" onClick={() => handleDelete(flow.id)}>
+                            <Trash2 className="h-4 w-4 mr-2" /> Excluir
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Switch 
-                      checked={flow.status === 'active'} 
-                      disabled={flow.status === 'draft'}
-                    />
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem>Editar</DropdownMenuItem>
-                        <DropdownMenuItem>Duplicar</DropdownMenuItem>
-                        <DropdownMenuItem>Ver logs</DropdownMenuItem>
-                        <DropdownMenuItem className="text-destructive">
-                          Excluir
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-                </div>
 
-                <h3 className="font-semibold mb-1">{flow.name}</h3>
-                <p className="text-sm text-muted-foreground mb-4">
-                  {flow.description}
-                </p>
+                  <h3 className="font-semibold mb-1">{flow.name}</h3>
+                  <p className="text-sm text-muted-foreground mb-4 line-clamp-2">
+                    {flow.description || 'Sem descrição'}
+                  </p>
 
-                <div className="flex items-center gap-2 text-xs text-muted-foreground mb-4">
-                  <Zap className="h-3 w-3" />
-                  <span>{flow.trigger}</span>
-                </div>
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground mb-4">
+                    <Zap className="h-3 w-3" />
+                    <span>{flow.trigger_type.replace('_', ' ')}</span>
+                  </div>
 
-                <div className="flex items-center justify-between pt-4 border-t border-border">
-                  <div>
-                    <p className="text-lg font-semibold">{flow.executions.toLocaleString()}</p>
-                    <p className="text-xs text-muted-foreground">execuções</p>
+                  <div className="flex items-center justify-between pt-4 border-t border-border">
+                    <div>
+                      <p className="text-lg font-semibold">{(flow.total_executions || 0).toLocaleString()}</p>
+                      <p className="text-xs text-muted-foreground">execuções</p>
+                    </div>
+                    <div className="text-right">
+                      <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${getStatusBadge(flow.status, flow.is_active)}`}>
+                        {getStatusLabel(flow.status, flow.is_active)}
+                      </span>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {flow.last_execution_at 
+                          ? formatDistanceToNow(new Date(flow.last_execution_at), { addSuffix: true, locale: ptBR })
+                          : 'Nunca executado'}
+                      </p>
+                    </div>
                   </div>
-                  <div className="text-right">
-                    <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${
-                      flow.status === 'active' 
-                        ? 'badge-success' 
-                        : flow.status === 'paused'
-                        ? 'badge-warning'
-                        : 'bg-muted text-muted-foreground'
-                    }`}>
-                      {flow.status === 'active' ? 'Ativo' : flow.status === 'paused' ? 'Pausado' : 'Rascunho'}
-                    </span>
-                    <p className="text-xs text-muted-foreground mt-1">{flow.lastRun}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                </CardContent>
+              </Card>
+            ))
+          )}
 
           {/* Create New Flow Card */}
-          <Card className="border-dashed hover-lift cursor-pointer">
+          <Card className="border-dashed hover-lift cursor-pointer" onClick={() => setCreateOpen(true)}>
             <CardContent className="p-5 flex flex-col items-center justify-center h-full min-h-[200px] text-center">
               <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-3">
                 <Plus className="h-6 w-6 text-muted-foreground" />
@@ -161,6 +177,8 @@ export default function Flows() {
           </Card>
         </div>
       </div>
+
+      <CreateFlowModal open={createOpen} onOpenChange={setCreateOpen} />
     </DashboardLayout>
   );
 }
