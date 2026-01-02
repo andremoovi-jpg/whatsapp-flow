@@ -55,6 +55,7 @@ export type NodeType =
   | 'action_send_buttons'
   | 'action_send_list'
   | 'action_send_media'
+  | 'action_send_cta_url'
   | 'action_add_tag'
   | 'action_remove_tag'
   | 'action_update_field'
@@ -107,6 +108,15 @@ export interface NodeConfig {
   requestBody?: Record<string, unknown>;
   responseMapping?: Record<string, string>;
   waitOptions?: Array<{ id: string; text: string; timeout?: number }>;
+  
+  // CTA URL button config
+  ctaUrl?: {
+    headerText?: string;
+    bodyText: string;
+    footerText?: string;
+    buttonText: string;
+    url: string;
+  };
 }
 
 export const nodeCategories = {
@@ -128,6 +138,7 @@ export const nodeCategories = {
     { type: 'action_send_buttons', label: 'Enviar Botões', icon: 'LayoutGrid' },
     { type: 'action_send_list', label: 'Enviar Lista', icon: 'List' },
     { type: 'action_send_media', label: 'Enviar Mídia', icon: 'Image' },
+    { type: 'action_send_cta_url', label: 'Botão com Link', icon: 'ExternalLink' },
     { type: 'action_add_tag', label: 'Adicionar Tag', icon: 'TagPlus' },
     { type: 'action_remove_tag', label: 'Remover Tag', icon: 'TagMinus' },
     { type: 'action_update_field', label: 'Atualizar Campo', icon: 'Edit' },
@@ -142,7 +153,7 @@ export const nodeCategories = {
 export const getNodeCategory = (type: string): 'trigger' | 'condition' | 'action_message' | 'action_data' | 'control' => {
   if (type.startsWith('trigger_')) return 'trigger';
   if (type.startsWith('condition_')) return 'condition';
-  if (['action_send_text', 'action_send_template', 'action_send_buttons', 'action_send_list', 'action_send_media'].includes(type)) {
+  if (['action_send_text', 'action_send_template', 'action_send_buttons', 'action_send_list', 'action_send_media', 'action_send_cta_url'].includes(type)) {
     return 'action_message';
   }
   if (['action_add_tag', 'action_remove_tag', 'action_update_field', 'action_webhook'].includes(type)) {

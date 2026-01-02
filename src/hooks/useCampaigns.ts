@@ -251,10 +251,22 @@ export function useUpdateCampaign() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ id, ...data }: Partial<Campaign> & { id: string }) => {
+    mutationFn: async ({ id, stats, audience_filter, template_variables, ...rest }: Partial<Campaign> & { id: string }) => {
+      const updateData: Record<string, unknown> = { ...rest };
+      
+      if (stats !== undefined) {
+        updateData.stats = JSON.parse(JSON.stringify(stats));
+      }
+      if (audience_filter !== undefined) {
+        updateData.audience_filter = JSON.parse(JSON.stringify(audience_filter));
+      }
+      if (template_variables !== undefined) {
+        updateData.template_variables = JSON.parse(JSON.stringify(template_variables));
+      }
+
       const { error } = await supabase
         .from('campaigns')
-        .update(data)
+        .update(updateData)
         .eq('id', id);
 
       if (error) throw error;
@@ -293,7 +305,7 @@ export function useDuplicateCampaign() {
           name: `${original.name} (cópia)`,
           status: 'draft',
           scheduled_at: null,
-          stats: { total: original.audience_count || 0, sent: 0, delivered: 0, read: 0, failed: 0 },
+          stats: JSON.parse(JSON.stringify({ total: original.audience_count || 0, sent: 0, delivered: 0, read: 0, failed: 0 })),
         })
         .select()
         .single();

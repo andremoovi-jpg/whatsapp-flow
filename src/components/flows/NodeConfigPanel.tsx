@@ -11,7 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { X, Plus, Trash2, Copy } from 'lucide-react';
+import { X, Plus, Trash2, Copy, ExternalLink } from 'lucide-react';
 import { NodeConfig } from '@/hooks/useFlows';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
@@ -326,6 +326,91 @@ export function NodeConfigPanel({ node, onClose, onUpdate, onDelete }: NodeConfi
             </div>
           </div>
         );
+
+      case 'action_send_cta_url': {
+        const ctaUrl = config.ctaUrl || { bodyText: '', buttonText: '', url: '' };
+        const isValidUrl = (url: string) => {
+          try {
+            new URL(url);
+            return true;
+          } catch {
+            return false;
+          }
+        };
+        const urlError = ctaUrl.url && !isValidUrl(ctaUrl.url);
+
+        return (
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Header (opcional)</Label>
+              <Input
+                placeholder="Título da mensagem"
+                value={ctaUrl.headerText || ''}
+                onChange={(e) => updateConfig({ ctaUrl: { ...ctaUrl, headerText: e.target.value } })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Corpo da mensagem *</Label>
+              <Textarea
+                placeholder="Digite o texto principal da mensagem..."
+                value={ctaUrl.bodyText || ''}
+                onChange={(e) => updateConfig({ ctaUrl: { ...ctaUrl, bodyText: e.target.value } })}
+                rows={3}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Footer (opcional)</Label>
+              <Input
+                placeholder="Texto do rodapé"
+                value={ctaUrl.footerText || ''}
+                onChange={(e) => updateConfig({ ctaUrl: { ...ctaUrl, footerText: e.target.value } })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Texto do botão *</Label>
+              <Input
+                placeholder="ex: Acessar Site"
+                value={ctaUrl.buttonText || ''}
+                onChange={(e) => updateConfig({ ctaUrl: { ...ctaUrl, buttonText: e.target.value } })}
+                maxLength={20}
+              />
+              <p className="text-xs text-muted-foreground">Máx. 20 caracteres</p>
+            </div>
+            <div className="space-y-2">
+              <Label>URL do link *</Label>
+              <Input
+                placeholder="https://exemplo.com"
+                value={ctaUrl.url || ''}
+                onChange={(e) => updateConfig({ ctaUrl: { ...ctaUrl, url: e.target.value } })}
+                className={urlError ? 'border-destructive' : ''}
+              />
+              {urlError && (
+                <p className="text-xs text-destructive">URL inválida</p>
+              )}
+            </div>
+
+            {/* Preview */}
+            <div className="space-y-2">
+              <Label className="text-xs text-muted-foreground">Prévia</Label>
+              <div className="border rounded-lg p-3 bg-muted/30 space-y-2">
+                {ctaUrl.headerText && (
+                  <p className="text-sm font-semibold">{ctaUrl.headerText}</p>
+                )}
+                <p className="text-sm">{ctaUrl.bodyText || 'Corpo da mensagem...'}</p>
+                {ctaUrl.footerText && (
+                  <p className="text-xs text-muted-foreground">{ctaUrl.footerText}</p>
+                )}
+                <div className="pt-2 border-t">
+                  <div className="flex items-center justify-center gap-2 text-primary text-sm font-medium py-2 bg-primary/10 rounded">
+                    <ExternalLink className="h-4 w-4" />
+                    {ctaUrl.buttonText || 'Texto do botão'}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      }
 
       default:
         return (

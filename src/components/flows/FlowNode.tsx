@@ -6,7 +6,7 @@ import {
   MessageCircle, LayoutGrid, List, Image,
   Plus, Minus, Edit, Globe,
   MessageSquareMore, Timer, UserRound, CircleStop,
-  FileCode
+  FileCode, ExternalLink
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { getNodeCategory, NodeConfig } from '@/hooks/useFlows';
@@ -25,6 +25,7 @@ const iconMap: Record<string, React.ElementType> = {
   action_send_buttons: LayoutGrid,
   action_send_list: List,
   action_send_media: Image,
+  action_send_cta_url: ExternalLink,
   action_add_tag: Plus,
   action_remove_tag: Minus,
   action_update_field: Edit,
