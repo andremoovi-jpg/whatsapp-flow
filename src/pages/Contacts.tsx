@@ -1,9 +1,9 @@
 import { useState } from 'react';
-import { Search, Plus, Filter, MoreHorizontal, Mail, Phone, Tag } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Plus, MoreHorizontal, Phone, Mail, Eye, Pencil, Trash2 } from 'lucide-react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
-import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import {
   Table,
   TableBody,
@@ -19,68 +19,68 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { Skeleton } from '@/components/ui/skeleton';
+import { formatDistanceToNow } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 
-const contacts = [
-  {
-    id: '1',
-    name: 'Maria Silva',
-    phone: '+55 11 99999-1234',
-    email: 'maria@email.com',
-    tags: ['Cliente', 'VIP'],
-    lastInteraction: '2 min atrás',
-    optedIn: true,
-  },
-  {
-    id: '2',
-    name: 'João Santos',
-    phone: '+55 11 99999-5678',
-    email: 'joao@email.com',
-    tags: ['Lead'],
-    lastInteraction: '15 min atrás',
-    optedIn: true,
-  },
-  {
-    id: '3',
-    name: 'Ana Costa',
-    phone: '+55 21 99999-9012',
-    email: 'ana@email.com',
-    tags: ['Cliente'],
-    lastInteraction: '1 hora atrás',
-    optedIn: true,
-  },
-  {
-    id: '4',
-    name: 'Pedro Lima',
-    phone: '+55 31 99999-3456',
-    email: 'pedro@email.com',
-    tags: ['Lead', 'Newsletter'],
-    lastInteraction: '2 horas atrás',
-    optedIn: false,
-  },
-  {
-    id: '5',
-    name: 'Carla Souza',
-    phone: '+55 41 99999-7890',
-    email: 'carla@email.com',
-    tags: ['Cliente', 'Suporte'],
-    lastInteraction: '1 dia atrás',
-    optedIn: true,
-  },
-];
+import { ContactModal } from '@/components/contacts/ContactModal';
+import { ImportCSVModal } from '@/components/contacts/ImportCSVModal';
+import { ContactFilters } from '@/components/contacts/ContactFilters';
+import { BulkActionsBar } from '@/components/contacts/BulkActionsBar';
+import { TagBadge } from '@/components/contacts/TagBadge';
+import {
+  useContacts,
+  useContactStats,
+  useAllTags,
+  useDeleteContacts,
+  ContactFilters as ContactFiltersType,
+  Contact,
+} from '@/hooks/useContacts';
 
 export default function Contacts() {
+  const navigate = useNavigate();
   const [selectedContacts, setSelectedContacts] = useState<string[]>([]);
+  const [filters, setFilters] = useState<ContactFiltersType>({});
+  const [page, setPage] = useState(0);
+  const [showContactModal, setShowContactModal] = useState(false);
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [editingContact, setEditingContact] = useState<Contact | null>(null);
+
+  const { data: contactsData, isLoading } = useContacts(filters, page);
+  const { data: stats } = useContactStats();
+  const { data: allTags = [] } = useAllTags();
+  const deleteContacts = useDeleteContacts();
+
+  const contacts = contactsData?.data ?? [];
+  const totalCount = contactsData?.count ?? 0;
+  const totalPages = Math.ceil(totalCount / 20);
 
   const toggleContact = (id: string) => {
-    setSelectedContacts(prev =>
-      prev.includes(id) ? prev.filter(c => c !== id) : [...prev, id]
+    setSelectedContacts((prev) =>
+      prev.includes(id) ? prev.filter((c) => c !== id) : [...prev, id]
     );
   };
 
   const toggleAll = () => {
-    setSelectedContacts(prev =>
-      prev.length === contacts.length ? [] : contacts.map(c => c.id)
+    setSelectedContacts((prev) =>
+      prev.length === contacts.length ? [] : contacts.map((c) => c.id)
     );
+  };
+
+  const handleEdit = (contact: Contact) => {
+    setEditingContact(contact);
+    setShowContactModal(true);
+  };
+
+  const handleDelete = (id: string) => {
+    deleteContacts.mutate([id]);
+  };
+
+  const formatPhone = (phone: string) => {
+    if (phone.startsWith('+55') && phone.length >= 13) {
+      return `+55 ${phone.slice(3, 5)} ${phone.slice(5, 10)}-${phone.slice(10)}`;
+    }
+    return phone;
   };
 
   return (
@@ -90,15 +90,13 @@ export default function Contacts() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold">Contatos</h1>
-            <p className="text-muted-foreground">
-              Gerencie seus contatos e leads
-            </p>
+            <p className="text-muted-foreground">Gerencie seus contatos e leads</p>
           </div>
           <div className="flex items-center gap-3">
-            <Button variant="outline">
-              Importar
+            <Button variant="outline" onClick={() => setShowImportModal(true)}>
+              Importar CSV
             </Button>
-            <Button>
+            <Button onClick={() => { setEditingContact(null); setShowContactModal(true); }}>
               <Plus className="h-4 w-4 mr-2" />
               Novo Contato
             </Button>
@@ -108,15 +106,15 @@ export default function Contacts() {
         {/* Stats */}
         <div className="grid gap-4 md:grid-cols-4">
           {[
-            { label: 'Total de Contatos', value: '5,678' },
-            { label: 'Ativos', value: '4,521' },
-            { label: 'Opt-in', value: '4,102' },
-            { label: 'Novos (7 dias)', value: '234' },
+            { label: 'Total de Contatos', value: stats?.total ?? 0 },
+            { label: 'Ativos (7 dias)', value: stats?.recentlyActive ?? 0 },
+            { label: 'Opt-in', value: stats?.optedIn ?? 0 },
+            { label: 'Novos (7 dias)', value: stats?.newContacts ?? 0 },
           ].map((stat, index) => (
             <Card key={index}>
               <CardContent className="p-4">
                 <p className="text-sm text-muted-foreground">{stat.label}</p>
-                <p className="text-2xl font-bold mt-1">{stat.value}</p>
+                <p className="text-2xl font-bold mt-1">{stat.value.toLocaleString()}</p>
               </CardContent>
             </Card>
           ))}
@@ -125,34 +123,14 @@ export default function Contacts() {
         {/* Table */}
         <Card>
           <CardHeader className="pb-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="relative w-64">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Buscar contatos..."
-                    className="pl-9"
-                  />
-                </div>
-                <Button variant="outline" size="sm">
-                  <Filter className="h-4 w-4 mr-2" />
-                  Filtros
-                </Button>
-              </div>
-              {selectedContacts.length > 0 && (
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-muted-foreground">
-                    {selectedContacts.length} selecionado(s)
-                  </span>
-                  <Button variant="outline" size="sm">
-                    <Tag className="h-4 w-4 mr-2" />
-                    Adicionar Tag
-                  </Button>
-                  <Button variant="destructive" size="sm">
-                    Excluir
-                  </Button>
-                </div>
-              )}
+            <div className="space-y-4">
+              <ContactFilters filters={filters} onFiltersChange={setFilters} availableTags={allTags} />
+              <BulkActionsBar
+                selectedIds={selectedContacts}
+                contacts={contacts}
+                onClearSelection={() => setSelectedContacts([])}
+                availableTags={allTags}
+              />
             </div>
           </CardHeader>
           <CardContent>
@@ -161,7 +139,7 @@ export default function Contacts() {
                 <TableRow>
                   <TableHead className="w-12">
                     <Checkbox
-                      checked={selectedContacts.length === contacts.length}
+                      checked={contacts.length > 0 && selectedContacts.length === contacts.length}
                       onCheckedChange={toggleAll}
                     />
                   </TableHead>
@@ -174,82 +152,109 @@ export default function Contacts() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {contacts.map((contact) => (
-                  <TableRow key={contact.id}>
-                    <TableCell>
-                      <Checkbox
-                        checked={selectedContacts.includes(contact.id)}
-                        onCheckedChange={() => toggleContact(contact.id)}
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center">
-                          <span className="text-sm font-medium text-primary">
-                            {contact.name.split(' ').map(n => n[0]).join('')}
-                          </span>
-                        </div>
-                        <div>
-                          <p className="font-medium">{contact.name}</p>
-                          <p className="text-sm text-muted-foreground">{contact.email}</p>
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {contact.phone}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex flex-wrap gap-1">
-                        {contact.tags.map((tag, index) => (
-                          <span
-                            key={index}
-                            className="px-2 py-0.5 text-xs bg-muted rounded-full"
-                          >
-                            {tag}
-                          </span>
-                        ))}
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {contact.lastInteraction}
-                    </TableCell>
-                    <TableCell>
-                      <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${
-                        contact.optedIn ? 'badge-success' : 'bg-muted text-muted-foreground'
-                      }`}>
-                        {contact.optedIn ? 'Sim' : 'Não'}
-                      </span>
-                    </TableCell>
-                    <TableCell>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-8 w-8">
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem>
-                            <Phone className="h-4 w-4 mr-2" />
-                            Iniciar conversa
-                          </DropdownMenuItem>
-                          <DropdownMenuItem>
-                            <Mail className="h-4 w-4 mr-2" />
-                            Enviar template
-                          </DropdownMenuItem>
-                          <DropdownMenuItem>Editar</DropdownMenuItem>
-                          <DropdownMenuItem className="text-destructive">
-                            Excluir
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                {isLoading ? (
+                  Array.from({ length: 5 }).map((_, i) => (
+                    <TableRow key={i}>
+                      <TableCell><Skeleton className="h-4 w-4" /></TableCell>
+                      <TableCell><Skeleton className="h-10 w-48" /></TableCell>
+                      <TableCell><Skeleton className="h-4 w-32" /></TableCell>
+                      <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                      <TableCell><Skeleton className="h-4 w-20" /></TableCell>
+                      <TableCell><Skeleton className="h-4 w-12" /></TableCell>
+                      <TableCell><Skeleton className="h-8 w-8" /></TableCell>
+                    </TableRow>
+                  ))
+                ) : contacts.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                      Nenhum contato encontrado
                     </TableCell>
                   </TableRow>
-                ))}
+                ) : (
+                  contacts.map((contact) => (
+                    <TableRow key={contact.id} className="cursor-pointer hover:bg-muted/50" onClick={() => navigate(`/contacts/${contact.id}`)}>
+                      <TableCell onClick={(e) => e.stopPropagation()}>
+                        <Checkbox checked={selectedContacts.includes(contact.id)} onCheckedChange={() => toggleContact(contact.id)} />
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-3">
+                          <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center">
+                            <span className="text-sm font-medium text-primary">
+                              {(contact.name || contact.phone_number).slice(0, 2).toUpperCase()}
+                            </span>
+                          </div>
+                          <div>
+                            <p className="font-medium">{contact.name || 'Sem nome'}</p>
+                            <p className="text-sm text-muted-foreground">{contact.email || '-'}</p>
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">{formatPhone(contact.phone_number)}</TableCell>
+                      <TableCell>
+                        <div className="flex flex-wrap gap-1">
+                          {contact.tags?.slice(0, 3).map((tag) => (
+                            <TagBadge key={tag} tag={tag} />
+                          ))}
+                          {(contact.tags?.length ?? 0) > 3 && (
+                            <span className="text-xs text-muted-foreground">+{contact.tags!.length - 3}</span>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {contact.last_interaction_at
+                          ? formatDistanceToNow(new Date(contact.last_interaction_at), { addSuffix: true, locale: ptBR })
+                          : '-'}
+                      </TableCell>
+                      <TableCell>
+                        <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${contact.opted_in ? 'badge-success' : 'bg-muted text-muted-foreground'}`}>
+                          {contact.opted_in ? 'Sim' : 'Não'}
+                        </span>
+                      </TableCell>
+                      <TableCell onClick={(e) => e.stopPropagation()}>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-8 w-8">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => navigate(`/contacts/${contact.id}`)}>
+                              <Eye className="h-4 w-4 mr-2" />Ver detalhes
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleEdit(contact)}>
+                              <Pencil className="h-4 w-4 mr-2" />Editar
+                            </DropdownMenuItem>
+                            <DropdownMenuItem className="text-destructive" onClick={() => handleDelete(contact.id)}>
+                              <Trash2 className="h-4 w-4 mr-2" />Excluir
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
               </TableBody>
             </Table>
+
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-between mt-4 pt-4 border-t">
+                <p className="text-sm text-muted-foreground">
+                  Mostrando {page * 20 + 1}-{Math.min((page + 1) * 20, totalCount)} de {totalCount}
+                </p>
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" disabled={page === 0} onClick={() => setPage(page - 1)}>Anterior</Button>
+                  <Button variant="outline" size="sm" disabled={page >= totalPages - 1} onClick={() => setPage(page + 1)}>Próxima</Button>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
+
+      {/* Modals */}
+      <ContactModal open={showContactModal} onOpenChange={setShowContactModal} contact={editingContact} />
+      <ImportCSVModal open={showImportModal} onOpenChange={setShowImportModal} />
     </DashboardLayout>
   );
 }
