@@ -1,12 +1,15 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Node, Edge } from 'reactflow';
-import { ArrowLeft, Save, Play, Rocket, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, Save, Play, Rocket, AlertTriangle, Monitor } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { FlowCanvas, FlowCanvasRef } from '@/components/flows/FlowCanvas';
+import { FlowEditorErrorBoundary } from '@/components/ErrorBoundary';
+import { useFlowEditorShortcuts } from '@/hooks/useKeyboardShortcuts';
+import { useIsMobile } from '@/hooks/use-mobile';
 import {
   useFlow,
   useFlowNodes,
@@ -26,12 +29,14 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { Card, CardContent } from '@/components/ui/card';
 
 export default function FlowEditor() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
   const canvasRef = useRef<FlowCanvasRef>(null);
+  const isMobile = useIsMobile();
 
   const { data: flow, isLoading: flowLoading } = useFlow(id);
   const { data: dbNodes, isLoading: nodesLoading } = useFlowNodes(id);
@@ -76,6 +81,14 @@ export default function FlowEditor() {
       })),
     });
   }, [id, saveCanvas]);
+
+  // Keyboard shortcuts (after handleSave is defined)
+  useFlowEditorShortcuts({
+    onSave: handleSave,
+    onDelete: () => {
+      // Delete selected nodes - would need to integrate with ReactFlow's selection state
+    },
+  });
 
   const handleValidateAndPublish = useCallback(async () => {
     if (!id || !canvasRef.current || !flow) return;
@@ -150,14 +163,46 @@ export default function FlowEditor() {
     );
   }
 
-  return (
-    <div className="h-screen flex flex-col bg-background">
-      {/* Header */}
-      <header className="h-14 border-b px-4 flex items-center justify-between shrink-0">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate('/flows')}>
+  // Mobile warning
+  if (isMobile) {
+    return (
+      <div className="h-screen flex flex-col bg-background">
+        <header className="h-14 border-b px-4 flex items-center gap-4">
+          <Button variant="ghost" size="icon" onClick={() => navigate('/flows')} aria-label="Voltar">
             <ArrowLeft className="h-5 w-5" />
           </Button>
+          <h1 className="text-lg font-semibold">{flow.name}</h1>
+        </header>
+        <div className="flex-1 flex items-center justify-center p-4">
+          <Card className="max-w-md w-full">
+            <CardContent className="p-6 text-center">
+              <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
+                <Monitor className="h-8 w-8 text-primary" />
+              </div>
+              <h2 className="text-lg font-semibold mb-2">Melhor experiência em desktop</h2>
+              <p className="text-muted-foreground mb-6">
+                O editor de fluxos funciona melhor em telas maiores. Use um computador para a melhor experiência.
+              </p>
+              <Button variant="outline" onClick={() => navigate('/flows')}>
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Voltar para Fluxos
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <FlowEditorErrorBoundary>
+      <div className="h-screen flex flex-col bg-background">
+        {/* Header */}
+        <header className="h-14 border-b px-4 flex items-center justify-between shrink-0">
+          <div className="flex items-center gap-4">
+            <Button variant="ghost" size="icon" onClick={() => navigate('/flows')} aria-label="Voltar">
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
 
           {isEditing ? (
             <Input
@@ -223,28 +268,29 @@ export default function FlowEditor() {
         />
       </div>
 
-      {/* Validation Errors Modal */}
-      <Dialog open={showValidationModal} onOpenChange={setShowValidationModal}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-destructive">
-              <AlertTriangle className="h-5 w-5" />
-              Erros de Validação
-            </DialogTitle>
-            <DialogDescription>
-              Corrija os seguintes erros antes de publicar o fluxo:
-            </DialogDescription>
-          </DialogHeader>
-          <ul className="space-y-2 mt-4">
-            {validationErrors.map((error, index) => (
-              <li key={index} className="flex items-start gap-2 text-sm">
-                <span className="text-destructive">•</span>
-                <span>{error}</span>
-              </li>
-            ))}
-          </ul>
-        </DialogContent>
-      </Dialog>
-    </div>
+        {/* Validation Errors Modal */}
+        <Dialog open={showValidationModal} onOpenChange={setShowValidationModal}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2 text-destructive">
+                <AlertTriangle className="h-5 w-5" />
+                Erros de Validação
+              </DialogTitle>
+              <DialogDescription>
+                Corrija os seguintes erros antes de publicar o fluxo:
+              </DialogDescription>
+            </DialogHeader>
+            <ul className="space-y-2 mt-4">
+              {validationErrors.map((error, index) => (
+                <li key={index} className="flex items-start gap-2 text-sm">
+                  <span className="text-destructive">•</span>
+                  <span>{error}</span>
+                </li>
+              ))}
+            </ul>
+          </DialogContent>
+        </Dialog>
+      </div>
+    </FlowEditorErrorBoundary>
   );
 }

@@ -1,12 +1,14 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { PanelRightClose, PanelRightOpen } from 'lucide-react';
+import { PanelRightClose, PanelRightOpen, ArrowLeft } from 'lucide-react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Button } from '@/components/ui/button';
 import { ConversationList } from '@/components/inbox/ConversationList';
 import { ChatArea } from '@/components/inbox/ChatArea';
 import { ContactSidebar } from '@/components/inbox/ContactSidebar';
 import { SendTemplateModal } from '@/components/inbox/SendTemplateModal';
+import { InboxErrorBoundary } from '@/components/ErrorBoundary';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { 
   useConversations, 
   useMessages, 
@@ -20,12 +22,14 @@ import { toast } from 'sonner';
 export default function Inbox() {
   const [searchParams, setSearchParams] = useSearchParams();
   const conversationIdParam = searchParams.get('conversation');
+  const isMobile = useIsMobile();
   
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
   const [filter, setFilter] = useState<ConversationFilter>('all');
   const [search, setSearch] = useState('');
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [templateModalOpen, setTemplateModalOpen] = useState(false);
+  const [mobileView, setMobileView] = useState<'list' | 'chat'>('list');
 
   const { data: conversations = [], isLoading: conversationsLoading } = useConversations(filter, search);
   const { data: messages = [], isLoading: messagesLoading } = useMessages(selectedConversation?.id || null);
@@ -57,6 +61,14 @@ export default function Inbox() {
   const handleSelectConversation = (conversation: Conversation) => {
     setSelectedConversation(conversation);
     setSearchParams({ conversation: conversation.id });
+    if (isMobile) {
+      setMobileView('chat');
+    }
+  };
+
+  const handleBackToList = () => {
+    setMobileView('list');
+    setSelectedConversation(null);
   };
 
   const handleSendTemplate = async (templateId: string, variables: Record<string, string>) => {
@@ -80,56 +92,77 @@ export default function Inbox() {
 
   return (
     <DashboardLayout breadcrumbs={[{ label: 'Inbox' }]}>
-      <div className="flex h-[calc(100vh-8rem)] bg-card rounded-xl border border-border overflow-hidden animate-fade-in">
-        {/* Conversations List */}
-        <ConversationList
-          conversations={conversations}
-          selectedId={selectedConversation?.id || null}
-          onSelect={handleSelectConversation}
-          filter={filter}
-          onFilterChange={setFilter}
-          search={search}
-          onSearchChange={setSearch}
-          isLoading={conversationsLoading}
-        />
+      <InboxErrorBoundary>
+        <div className="flex h-[calc(100vh-8rem)] bg-card rounded-xl border border-border overflow-hidden animate-fade-in">
+          {/* Conversations List - Hidden on mobile when viewing chat */}
+          <div className={`${isMobile && mobileView === 'chat' ? 'hidden' : 'flex'} ${isMobile ? 'w-full' : ''}`}>
+            <ConversationList
+              conversations={conversations}
+              selectedId={selectedConversation?.id || null}
+              onSelect={handleSelectConversation}
+              filter={filter}
+              onFilterChange={setFilter}
+              search={search}
+              onSearchChange={setSearch}
+              isLoading={conversationsLoading}
+            />
+          </div>
 
-        {/* Chat Area */}
-        <ChatArea
-          conversation={selectedConversation}
-          messages={messages}
-          isLoading={messagesLoading}
-          onOpenTemplateModal={() => setTemplateModalOpen(true)}
-        />
+          {/* Chat Area - Full width on mobile */}
+          <div className={`flex-1 ${isMobile && mobileView === 'list' ? 'hidden' : 'flex flex-col'}`}>
+            {isMobile && mobileView === 'chat' && (
+              <div className="h-12 border-b flex items-center px-3">
+                <Button variant="ghost" size="icon" onClick={handleBackToList} aria-label="Voltar">
+                  <ArrowLeft className="h-5 w-5" />
+                </Button>
+                <span className="ml-2 font-medium truncate">
+                  {selectedConversation?.contact?.name || selectedConversation?.contact?.phone_number}
+                </span>
+              </div>
+            )}
+            <ChatArea
+              conversation={selectedConversation}
+              messages={messages}
+              isLoading={messagesLoading}
+              onOpenTemplateModal={() => setTemplateModalOpen(true)}
+            />
+          </div>
 
-        {/* Contact Sidebar Toggle (for mobile) */}
-        <Button
-          variant="ghost"
-          size="icon"
-          className="absolute right-4 top-4 xl:hidden z-10"
-          onClick={() => setSidebarOpen(!sidebarOpen)}
-        >
-          {sidebarOpen ? (
-            <PanelRightClose className="h-5 w-5" />
-          ) : (
-            <PanelRightOpen className="h-5 w-5" />
+          {/* Contact Sidebar Toggle (for tablet/desktop) */}
+          {!isMobile && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="absolute right-4 top-4 xl:hidden z-10"
+              onClick={() => setSidebarOpen(!sidebarOpen)}
+              aria-label={sidebarOpen ? 'Fechar painel' : 'Abrir painel'}
+            >
+              {sidebarOpen ? (
+                <PanelRightClose className="h-5 w-5" />
+              ) : (
+                <PanelRightOpen className="h-5 w-5" />
+              )}
+            </Button>
           )}
-        </Button>
 
-        {/* Contact Details Sidebar */}
-        <ContactSidebar
-          conversation={selectedConversation}
-          isOpen={sidebarOpen}
-          onClose={() => setSidebarOpen(false)}
-        />
+          {/* Contact Details Sidebar - Hidden on mobile */}
+          {!isMobile && (
+            <ContactSidebar
+              conversation={selectedConversation}
+              isOpen={sidebarOpen}
+              onClose={() => setSidebarOpen(false)}
+            />
+          )}
 
-        {/* Send Template Modal */}
-        <SendTemplateModal
-          open={templateModalOpen}
-          onOpenChange={setTemplateModalOpen}
-          onSend={handleSendTemplate}
-          conversationId={selectedConversation?.id || null}
-        />
-      </div>
+          {/* Send Template Modal */}
+          <SendTemplateModal
+            open={templateModalOpen}
+            onOpenChange={setTemplateModalOpen}
+            onSend={handleSendTemplate}
+            conversationId={selectedConversation?.id || null}
+          />
+        </div>
+      </InboxErrorBoundary>
     </DashboardLayout>
   );
 }
