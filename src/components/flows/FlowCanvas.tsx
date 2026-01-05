@@ -94,7 +94,13 @@ function FlowCanvasInner({ initialNodes, initialEdges, canvasRef }: FlowCanvasIn
   // Connection handler
   const onConnect = useCallback(
     (params: Connection) => {
-      setEdges((eds) => addEdge({ ...params, animated: true, style: { stroke: 'hsl(var(--muted-foreground))', strokeWidth: 2 } }, eds));
+      const newEdge = {
+        ...params,
+        id: crypto.randomUUID(),
+        animated: true,
+        style: { stroke: 'hsl(var(--muted-foreground))', strokeWidth: 2 },
+      };
+      setEdges((eds) => addEdge(newEdge, eds));
     },
     [setEdges]
   );
