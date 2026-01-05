@@ -480,11 +480,10 @@ export function useSaveFlowCanvas() {
         if (nodesError) throw nodesError;
       }
 
-      // Insert new edges
+      // Insert new edges (let DB generate UUID for id)
       if (edges.length > 0) {
         const { error: edgesError } = await supabase.from('flow_edges').insert(
           edges.map((edge) => ({
-            id: edge.id,
             flow_id: flowId,
             source_node_id: edge.source_node_id,
             target_node_id: edge.target_node_id,
@@ -500,8 +499,14 @@ export function useSaveFlowCanvas() {
       queryClient.invalidateQueries({ queryKey: ['flow-edges', variables.flowId] });
       toast({ title: 'Fluxo salvo com sucesso!' });
     },
-    onError: () => {
-      toast({ title: 'Erro ao salvar fluxo', variant: 'destructive' });
+    onError: (error: any) => {
+      console.error('Erro ao salvar fluxo:', error);
+      const details = error?.message || error?.details || error?.hint || 'Erro desconhecido';
+      toast({ 
+        title: 'Erro ao salvar fluxo', 
+        description: details,
+        variant: 'destructive' 
+      });
     },
   });
 }
